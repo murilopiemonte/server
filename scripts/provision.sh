@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 export DEBIAN_FRONTEND=noninteractive
+USER="pyrello"
 
 # Update Package List
 
@@ -30,9 +31,9 @@ wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key a
 sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ trusty-pgdg main" >> /etc/apt/sources.list.d/postgresql.list'
 
 curl -s https://packagecloud.io/gpg.key | apt-key add -
-echo "deb http://packages.blackfire.io/debian any main" | tee /etc/apt/sources.list.d/blackfire.list
+#echo "deb http://packages.blackfire.io/debian any main" | tee /etc/apt/sources.list.d/blackfire.list
 
-curl --silent --location https://deb.nodesource.com/setup_5.x | bash -
+    curl --silent --location https://deb.nodesource.com/setup_5.x | bash -
 
 # Update Package Lists
 
@@ -62,19 +63,23 @@ mv composer.phar /usr/local/bin/composer
 
 # Add Composer Global Bin To Path
 
-printf "\nPATH=\"$(sudo su - vagrant -c 'composer config -g home 2>/dev/null')/vendor/bin:\$PATH\"\n" | tee -a /home/vagrant/.profile
+printf "\nPATH=\"$(sudo su - USER -c 'composer config -g home 2>/dev/null')/vendor/bin:\$PATH\"\n" | tee -a /home/$USER/.profile
 
 # Install Laravel Envoy & Installer
 
-sudo su vagrant <<'EOF'
-/usr/local/bin/composer global require "laravel/envoy=~1.0"
+#sudo su vagrant <<'EOF'
+#/usr/local/bin/composer global require "laravel/envoy=~1.0"
+#/usr/local/bin/composer global require "laravel/installer=~1.1"
+#EOF
+
+sudo su $USER <<'EOF'
 /usr/local/bin/composer global require "laravel/installer=~1.1"
 EOF
 
 # Set Some PHP CLI Settings
 
-sudo sed -i "s/error_reporting = .*/error_reporting = E_ALL/" /etc/php/7.0/cli/php.ini
-sudo sed -i "s/display_errors = .*/display_errors = On/" /etc/php/7.0/cli/php.ini
+#sudo sed -i "s/error_reporting = .*/error_reporting = E_ALL/" /etc/php/7.0/cli/php.ini
+#sudo sed -i "s/display_errors = .*/display_errors = On/" /etc/php/7.0/cli/php.ini
 sudo sed -i "s/memory_limit = .*/memory_limit = 512M/" /etc/php/7.0/cli/php.ini
 sudo sed -i "s/;date.timezone.*/date.timezone = UTC/" /etc/php/7.0/cli/php.ini
 
@@ -96,22 +101,24 @@ apt-get install -y hhvm
 # Configure HHVM To Run As Homestead
 
 service hhvm stop
-sed -i 's/#RUN_AS_USER="www-data"/RUN_AS_USER="vagrant"/' /etc/default/hhvm
+sed -i 's/#RUN_AS_USER="www-data"/RUN_AS_USER="$USER"/' /etc/default/hhvm
 service hhvm start
 
 # Start HHVM On System Start
 
 update-rc.d hhvm defaults
 
+# Do not enable xdebug
 # Setup Some PHP-FPM Options
 
-echo "xdebug.remote_enable = 1" >> /etc/php/7.0/fpm/conf.d/20-xdebug.ini
-echo "xdebug.remote_connect_back = 1" >> /etc/php/7.0/fpm/conf.d/20-xdebug.ini
-echo "xdebug.remote_port = 9000" >> /etc/php/7.0/fpm/conf.d/20-xdebug.ini
-echo "xdebug.max_nesting_level = 512" >> /etc/php/7.0/fpm/conf.d/20-xdebug.ini
+#echo "xdebug.remote_enable = 1" >> /etc/php/7.0/fpm/conf.d/20-xdebug.ini
+#echo "xdebug.remote_connect_back = 1" >> /etc/php/7.0/fpm/conf.d/20-xdebug.ini
+#echo "xdebug.remote_port = 9000" >> /etc/php/7.0/fpm/conf.d/20-xdebug.ini
+#echo "xdebug.max_nesting_level = 512" >> /etc/php/7.0/fpm/conf.d/20-xdebug.ini
 
-sed -i "s/error_reporting = .*/error_reporting = E_ALL/" /etc/php/7.0/fpm/php.ini
-sed -i "s/display_errors = .*/display_errors = On/" /etc/php/7.0/fpm/php.ini
+#sed -i "s/error_reporting = .*/error_reporting = E_ALL/" /etc/php/7.0/fpm/php.ini
+sed -i "s/error_reporting = .*/error_reporting = 1/" /etc/php/7.0/fpm/php.ini
+#sed -i "s/display_errors = .*/display_errors = On/" /etc/php/7.0/fpm/php.ini
 sed -i "s/;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/" /etc/php/7.0/fpm/php.ini
 sed -i "s/memory_limit = .*/memory_limit = 512M/" /etc/php/7.0/fpm/php.ini
 sed -i "s/upload_max_filesize = .*/upload_max_filesize = 100M/" /etc/php/7.0/fpm/php.ini
@@ -148,14 +155,14 @@ EOF
 
 # Set The Nginx & PHP-FPM User
 
-sed -i "s/user www-data;/user vagrant;/" /etc/nginx/nginx.conf
+sed -i "s/user www-data;/user $USER;/" /etc/nginx/nginx.conf
 sed -i "s/# server_names_hash_bucket_size.*/server_names_hash_bucket_size 64;/" /etc/nginx/nginx.conf
 
-sed -i "s/user = www-data/user = vagrant/" /etc/php/7.0/fpm/pool.d/www.conf
-sed -i "s/group = www-data/group = vagrant/" /etc/php/7.0/fpm/pool.d/www.conf
+sed -i "s/user = www-data/user = $USER/" /etc/php/7.0/fpm/pool.d/www.conf
+sed -i "s/group = www-data/group = $USER/" /etc/php/7.0/fpm/pool.d/www.conf
 
-sed -i "s/listen\.owner.*/listen.owner = vagrant/" /etc/php/7.0/fpm/pool.d/www.conf
-sed -i "s/listen\.group.*/listen.group = vagrant/" /etc/php/7.0/fpm/pool.d/www.conf
+sed -i "s/listen\.owner.*/listen.owner = $USER/" /etc/php/7.0/fpm/pool.d/www.conf
+sed -i "s/listen\.group.*/listen.group = $USER/" /etc/php/7.0/fpm/pool.d/www.conf
 sed -i "s/;listen\.mode.*/listen.mode = 0666/" /etc/php/7.0/fpm/pool.d/www.conf
 
 service nginx restart
@@ -163,9 +170,9 @@ service php7.0-fpm restart
 
 # Add Vagrant User To WWW-Data
 
-usermod -a -G www-data vagrant
-id vagrant
-groups vagrant
+usermod -a -G www-data $USER
+id $USER
+groups $USER
 
 # Install Node
 
@@ -220,7 +227,7 @@ service postgresql restart
 
 # Install Blackfire
 
-apt-get install -y blackfire-agent blackfire-php
+#apt-get install -y blackfire-agent blackfire-php
 
 # Install A Few Other Things
 
@@ -233,9 +240,10 @@ sed -i "s/#START=yes/START=yes/" /etc/default/beanstalkd
 
 # Enable Swap Memory
 
-/bin/dd if=/dev/zero of=/var/swap.1 bs=1M count=1024
-/sbin/mkswap /var/swap.1
-/sbin/swapon /var/swap.1
+# Commented out because Linode handles swap setup
+#/bin/dd if=/dev/zero of=/var/swap.1 bs=1M count=1024
+#/sbin/mkswap /var/swap.1
+#/sbin/swapon /var/swap.1
 
 # Minimize The Disk Image
 
