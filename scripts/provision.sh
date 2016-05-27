@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 
 export DEBIAN_FRONTEND=noninteractive
-USER="pyrello"
+USER="intern"
+SQLUSER="homestead"
+SQLPASS="secret"
 
 # Update Package List
 
@@ -33,7 +35,7 @@ sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ trusty-pgdg main" >> /
 curl -s https://packagecloud.io/gpg.key | apt-key add -
 #echo "deb http://packages.blackfire.io/debian any main" | tee /etc/apt/sources.list.d/blackfire.list
 
-    curl --silent --location https://deb.nodesource.com/setup_5.x | bash -
+curl --silent --location https://deb.nodesource.com/setup_5.x | bash -
 
 # Update Package Lists
 
@@ -67,19 +69,12 @@ printf "\nPATH=\"$(sudo su - USER -c 'composer config -g home 2>/dev/null')/vend
 
 # Install Laravel Envoy & Installer
 
-#sudo su vagrant <<'EOF'
-#/usr/local/bin/composer global require "laravel/envoy=~1.0"
-#/usr/local/bin/composer global require "laravel/installer=~1.1"
-#EOF
-
 sudo su $USER <<'EOF'
 /usr/local/bin/composer global require "laravel/installer=~1.1"
 EOF
 
 # Set Some PHP CLI Settings
 
-#sudo sed -i "s/error_reporting = .*/error_reporting = E_ALL/" /etc/php/7.0/cli/php.ini
-#sudo sed -i "s/display_errors = .*/display_errors = On/" /etc/php/7.0/cli/php.ini
 sudo sed -i "s/memory_limit = .*/memory_limit = 512M/" /etc/php/7.0/cli/php.ini
 sudo sed -i "s/;date.timezone.*/date.timezone = UTC/" /etc/php/7.0/cli/php.ini
 
@@ -108,17 +103,9 @@ service hhvm start
 
 update-rc.d hhvm defaults
 
-# Do not enable xdebug
 # Setup Some PHP-FPM Options
 
-#echo "xdebug.remote_enable = 1" >> /etc/php/7.0/fpm/conf.d/20-xdebug.ini
-#echo "xdebug.remote_connect_back = 1" >> /etc/php/7.0/fpm/conf.d/20-xdebug.ini
-#echo "xdebug.remote_port = 9000" >> /etc/php/7.0/fpm/conf.d/20-xdebug.ini
-#echo "xdebug.max_nesting_level = 512" >> /etc/php/7.0/fpm/conf.d/20-xdebug.ini
-
-#sed -i "s/error_reporting = .*/error_reporting = E_ALL/" /etc/php/7.0/fpm/php.ini
 sed -i "s/error_reporting = .*/error_reporting = 1/" /etc/php/7.0/fpm/php.ini
-#sed -i "s/display_errors = .*/display_errors = On/" /etc/php/7.0/fpm/php.ini
 sed -i "s/;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/" /etc/php/7.0/fpm/php.ini
 sed -i "s/memory_limit = .*/memory_limit = 512M/" /etc/php/7.0/fpm/php.ini
 sed -i "s/upload_max_filesize = .*/upload_max_filesize = 100M/" /etc/php/7.0/fpm/php.ini
@@ -168,7 +155,7 @@ sed -i "s/;listen\.mode.*/listen.mode = 0666/" /etc/php/7.0/fpm/pool.d/www.conf
 service nginx restart
 service php7.0-fpm restart
 
-# Add Vagrant User To WWW-Data
+# Add $user User To WWW-Data
 
 usermod -a -G www-data $USER
 id $USER
@@ -184,11 +171,12 @@ apt-get install -y nodejs
 
 apt-get install -y sqlite3 libsqlite3-dev
 
+# TODO: replace this section with the mysql script
 # Install MySQL
 
 debconf-set-selections <<< "mysql-community-server mysql-community-server/data-dir select ''"
-debconf-set-selections <<< "mysql-community-server mysql-community-server/root-pass password secret"
-debconf-set-selections <<< "mysql-community-server mysql-community-server/re-root-pass password secret"
+debconf-set-selections <<< "mysql-community-server mysql-community-server/root-pass password $SQLPASS"
+debconf-set-selections <<< "mysql-community-server mysql-community-server/re-root-pass password $SQLPASS"
 apt-get install -y mysql-server
 
 # Configure MySQL Password Lifetime
@@ -199,19 +187,19 @@ echo "default_password_lifetime = 0" >> /etc/mysql/my.cnf
 
 sed -i '/^bind-address/s/bind-address.*=.*/bind-address = 0.0.0.0/' /etc/mysql/my.cnf
 
-mysql --user="root" --password="secret" -e "GRANT ALL ON *.* TO root@'0.0.0.0' IDENTIFIED BY 'secret' WITH GRANT OPTION;"
+mysql --user="root" --password="$SQLPASS" -e "GRANT ALL ON *.* TO root@'0.0.0.0' IDENTIFIED BY '$SQLPASS' WITH GRANT OPTION;"
 service mysql restart
 
-mysql --user="root" --password="secret" -e "CREATE USER 'homestead'@'0.0.0.0' IDENTIFIED BY 'secret';"
-mysql --user="root" --password="secret" -e "GRANT ALL ON *.* TO 'homestead'@'0.0.0.0' IDENTIFIED BY 'secret' WITH GRANT OPTION;"
-mysql --user="root" --password="secret" -e "GRANT ALL ON *.* TO 'homestead'@'%' IDENTIFIED BY 'secret' WITH GRANT OPTION;"
-mysql --user="root" --password="secret" -e "FLUSH PRIVILEGES;"
-mysql --user="root" --password="secret" -e "CREATE DATABASE homestead;"
+mysql --user="root" --password="$SQLPASS" -e "CREATE USER 'homestead'@'0.0.0.0' IDENTIFIED BY '$SQLPASS';"
+mysql --user="root" --password="$SQLPASS" -e "GRANT ALL ON *.* TO 'homestead'@'0.0.0.0' IDENTIFIED BY '$SQLPASS' WITH GRANT OPTION;"
+mysql --user="root" --password="$SQLPASS" -e "GRANT ALL ON *.* TO 'homestead'@'%' IDENTIFIED BY '$SQLPASS' WITH GRANT OPTION;"
+mysql --user="root" --password="$SQLPASS" -e "FLUSH PRIVILEGES;"
+mysql --user="root" --password="$SQLPASS" -e "CREATE DATABASE homestead;"
 service mysql restart
 
 # Add Timezone Support To MySQL
 
-mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql --user=root --password=secret mysql
+mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql --user=root --password=$SQLPASS mysql
 
 # Install Postgres
 
@@ -221,13 +209,9 @@ apt-get install -y postgresql-9.5 postgresql-contrib-9.5
 
 sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/g" /etc/postgresql/9.5/main/postgresql.conf
 echo "host    all             all             10.0.2.2/32               md5" | tee -a /etc/postgresql/9.5/main/pg_hba.conf
-sudo -u postgres psql -c "CREATE ROLE homestead LOGIN UNENCRYPTED PASSWORD 'secret' SUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION;"
+sudo -u postgres psql -c "CREATE ROLE homestead LOGIN UNENCRYPTED PASSWORD '$SQLPASS' SUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION;"
 sudo -u postgres /usr/bin/createdb --echo --owner=homestead homestead
 service postgresql restart
-
-# Install Blackfire
-
-#apt-get install -y blackfire-agent blackfire-php
 
 # Install A Few Other Things
 
@@ -238,16 +222,10 @@ apt-get install -y redis-server memcached beanstalkd
 sed -i "s/#START=yes/START=yes/" /etc/default/beanstalkd
 /etc/init.d/beanstalkd start
 
-# Enable Swap Memory
-
-# Commented out because Linode handles swap setup
-#/bin/dd if=/dev/zero of=/var/swap.1 bs=1M count=1024
-#/sbin/mkswap /var/swap.1
-#/sbin/swapon /var/swap.1
-
+# TODO: Figure out if this is necessary
 # Minimize The Disk Image
 
-echo "Minimizing disk image..."
-dd if=/dev/zero of=/EMPTY bs=1M
-rm -f /EMPTY
-sync
+#echo "Minimizing disk image..."
+#dd if=/dev/zero of=/EMPTY bs=1M
+#rm -f /EMPTY
+#sync

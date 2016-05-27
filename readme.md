@@ -1,3 +1,3 @@
-# Laravel Settler
+# Wrangler
 
-The scripts that build the Laravel Homestead development environment.
+A collection of scripts for server management
