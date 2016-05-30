@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 
 export DEBIAN_FRONTEND=noninteractive
-USER="intern"
-SQLUSER="homestead"
-SQLPASS="secret"
+USER="cowboy"
 
 # Update Package List
 
@@ -171,47 +169,9 @@ apt-get install -y nodejs
 
 apt-get install -y sqlite3 libsqlite3-dev
 
-# TODO: replace this section with the mysql script
-# Install MySQL
+# TODO: Add option to install mysql
 
-debconf-set-selections <<< "mysql-community-server mysql-community-server/data-dir select ''"
-debconf-set-selections <<< "mysql-community-server mysql-community-server/root-pass password $SQLPASS"
-debconf-set-selections <<< "mysql-community-server mysql-community-server/re-root-pass password $SQLPASS"
-apt-get install -y mysql-server
-
-# Configure MySQL Password Lifetime
-
-echo "default_password_lifetime = 0" >> /etc/mysql/my.cnf
-
-# Configure MySQL Remote Access
-
-sed -i '/^bind-address/s/bind-address.*=.*/bind-address = 0.0.0.0/' /etc/mysql/my.cnf
-
-mysql --user="root" --password="$SQLPASS" -e "GRANT ALL ON *.* TO root@'0.0.0.0' IDENTIFIED BY '$SQLPASS' WITH GRANT OPTION;"
-service mysql restart
-
-mysql --user="root" --password="$SQLPASS" -e "CREATE USER 'homestead'@'0.0.0.0' IDENTIFIED BY '$SQLPASS';"
-mysql --user="root" --password="$SQLPASS" -e "GRANT ALL ON *.* TO 'homestead'@'0.0.0.0' IDENTIFIED BY '$SQLPASS' WITH GRANT OPTION;"
-mysql --user="root" --password="$SQLPASS" -e "GRANT ALL ON *.* TO 'homestead'@'%' IDENTIFIED BY '$SQLPASS' WITH GRANT OPTION;"
-mysql --user="root" --password="$SQLPASS" -e "FLUSH PRIVILEGES;"
-mysql --user="root" --password="$SQLPASS" -e "CREATE DATABASE homestead;"
-service mysql restart
-
-# Add Timezone Support To MySQL
-
-mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql --user=root --password=$SQLPASS mysql
-
-# Install Postgres
-
-apt-get install -y postgresql-9.5 postgresql-contrib-9.5
-
-# Configure Postgres Remote Access
-
-sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/g" /etc/postgresql/9.5/main/postgresql.conf
-echo "host    all             all             10.0.2.2/32               md5" | tee -a /etc/postgresql/9.5/main/pg_hba.conf
-sudo -u postgres psql -c "CREATE ROLE homestead LOGIN UNENCRYPTED PASSWORD '$SQLPASS' SUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION;"
-sudo -u postgres /usr/bin/createdb --echo --owner=homestead homestead
-service postgresql restart
+# TODO: Add option to install postgres
 
 # Install A Few Other Things
 
