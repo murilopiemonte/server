@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 
-SQLUSER="homestead"
+SQLUSER="ranch"
 SQLPASS="secret"
+
+# Argument 1 is a username
+[ ! -z "$1" ] && SQLUSER=$1
+
+# Argument 2 is a password
+[ ! -z "$2" ] && SQLPASS=$2
 
 # Install MySQL
 
@@ -25,7 +31,7 @@ mysql --user="root" --password="$SQLPASS" -e "CREATE USER '$SQLUSER'@'0.0.0.0' I
 mysql --user="root" --password="$SQLPASS" -e "GRANT ALL ON *.* TO '$SQLUSER'@'0.0.0.0' IDENTIFIED BY '$SQLPASS' WITH GRANT OPTION;"
 mysql --user="root" --password="$SQLPASS" -e "GRANT ALL ON *.* TO '$SQLUSER'@'%' IDENTIFIED BY '$SQLPASS' WITH GRANT OPTION;"
 mysql --user="root" --password="$SQLPASS" -e "FLUSH PRIVILEGES;"
-mysql --user="root" --password="$SQLPASS" -e "CREATE DATABASE homestead;"
+mysql --user="root" --password="$SQLPASS" -e "CREATE DATABASE $SQLUSER;"
 service mysql restart
 
 # Add Timezone Support To MySQL
